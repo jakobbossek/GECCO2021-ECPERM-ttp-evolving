@@ -1,3 +1,3 @@
-# RESEARCH: Real-World-Like Instance Generation
+# RESEARCH: TTP Instance Generation
 
-We aim to develop generators for VLSI-like and (true) National instances for benchmarking of TSP/VRP algorithms.
+We aim to evolve instances for (pairs of) TTP-heuristics in order gain a better understanding of what makes these instances easier or harder.
