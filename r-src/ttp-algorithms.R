@@ -100,6 +100,24 @@ build_fitness_function = function(algorithm_a, algorithm_b, n_runs, args) {
   return(fun)
 }
 
+downScale = function(x, memorize = FALSE) {
+  ranges = apply(x, 2, range)
+  x[, 1] = (x[, 1] - ranges[1, 1])
+  x[, 2] = (x[, 2] - ranges[1, 2])
+  scale = max(ranges[2, ] - ranges[1, ])
+  if (memorize)
+    return(list(x = x / scale, ranges = ranges))
+  return(x / scale)
+}
+
+upScale = function(x, ranges) {
+  scale = max(ranges[2, ] - ranges[1, ])
+  x = x * scale
+  x[, 1L] = x[, 1L] + ranges[1, 1]
+  x[, 2L] = x[, 2L] + ranges[1, 2]
+  return(x)
+}
+
 doUniformItemsMutation = function(x, pm = 0.1, L = 1000, R = 10000) {
   n = nrow(x)
   k = floor(n * pm)
@@ -155,6 +173,7 @@ build_mutation = function(...) {
     checkmate::assertClass(x, "ttp_instance")
     if (!is.null(types$kp)) {
       if (runif(1L) < types$tsp$p) {
+
         x$items[, 1:2] = applyMutationFromCollection(as.matrix(x$items[, 1:2]), types$kp$collection)
       }
     }

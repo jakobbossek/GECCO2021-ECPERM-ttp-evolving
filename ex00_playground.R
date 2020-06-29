@@ -20,6 +20,17 @@ coll.meta = tspgen::addMutator(coll.meta, "doCapacityMutation")
 mut.fun = build_mutation(meta = list(p = 1.0, collection = coll.meta), kp = list(p = 1.0, collection = coll.kp), tsp = list(p = 1.0, collection = coll.tsp))
 
 x = TTP::loadProblem(prob)
+
+opar = par(mfrow = c(1, 3))
+plot(x$coordinates)
+res = downScale(x$coordinates, TRUE)
+plot(res$x)
+y = upScale(res$x, res$ranges)
+plot(y)
+par(opar)
+
+stop("DONE")
+
 x$coordinates = netgen:::rescaleNetworkGlobal2(x$coordinates) # FIXME: export in netgen
 x$items[, 1:2] = netgen:::rescaleNetworkGlobal2(as.matrix(x$items[, 1:2]))
 y = x
