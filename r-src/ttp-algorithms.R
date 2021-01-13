@@ -35,10 +35,23 @@
 #' }
 run_ttp_algorithm = function(x, algorithm, exec_path,
   max_iters_without_improvement = 10000L, max_time, seed = ceiling(runif(1, min = 1, max = 10000)), ...) {
-  if (!checkmate::test_file_exists(x, access = "r", extension = "ttp")) {
-    re::catf("[run_ttp_algorithm] At the moment only a path can be passed.")
+
+  # temporarily export if loaded instance is passed
+  if (checkmate::test_class(x, "ttp_instance")) {
+    tf = basename(tempfile("tempttp", tmpdir = getwd(), fileext = ".ttp"))
+    #re::catf("[run_ttp_algorithm] Loaded instance passed. Exporting to temporary file %s.\n", basename(tf))
+    TTP::writeProblem(x, path = tf, overwrite = TRUE)
+    x = tf
+    on.exit(unlink(x))
   }
+
+  if (!checkmate::test_file_exists(x, access = "r", extension = "ttp")) {
+    re::catf("[run_ttp_algorithm] File not found.")
+  }
+
   instance_folder = paste0(dirname(x), "/")
+  # obviously the java implementation does not work with absolute path
+  #instance_folder = "./"
   instance_filename = basename(x)
 
   command = "java"
@@ -58,136 +71,44 @@ run_ttp_algorithm = function(x, algorithm, exec_path,
   ))
 }
 
-#' @title Fitness fun builder
+#' Run TTP heuristic multiple times.
 #'
-#' @description Builds a function that expects a TTP instance, runs each
-#' \code{algorithm_a} and \code{algorithm_b} each \code{n_runs} times
-#' with arguments given by \code{args} (see \code{run_ttp_algorithm}) and
-#' returns the ratio of the median objective scores.
+#' @description An heuristic TTP solver is run multiple times. The aggregated objective
+#' value is returned.
 #'
-#' @param algorithm_a [\code{integer(1)}]\cr
-#'   First algoithm.
-#' @param algorithm_b [\code{integer(1)}]\cr
-#'   Second algoithm.
+#' @inheritParams run_ttp_algorithm
+#' @param args [\code{list}]\cr
+#'   List of arguments passed down to \code{algorithm}.
 #' @param n_runs [\code{integer(1)}]\cr
 #'   Number of independent runs.
-#' @param args [\code{named list}]\cr
-#'   Futher arguments passed down to \code{algorithm_a} and \code{algorithm_b}
-#'   (see docs of \code{run_ttp_algorithm}).
-#' @return [\code{function(x, ...)}] Function which expects a path to a
-#' TTP instance and returns a single scalar numeric value.
-build_fitness_function = function(algorithm_a, algorithm_b, n_runs, args) {
-  force(algorithm_a)
-  force(algorithm_b)
-  force(n_runs)
-  force(args)
-
-  run_multiple = function(x, algorithm, n_runs, args) {
-    args2 = c(list(x = x, algorithm = algorithm), args)
+#' @param aggr.fun [\code{function}]\cr
+#'   Function used to aggregate results. Default is \code{\link[stats]{median}}.
+#' @return [\code{numeric(1)}]
+run_ttp_algorithm_multiple_and_aggregate = function(x, algorithm, n_runs, args, aggr.fun = stats::median) {
+  args2 = c(list(x = x, algorithm = algorithm), args)
     runs = sapply(seq_len(n_runs), function(i) {
       do.call(run_ttp_algorithm, args2)$output$objective_score
     })
-    # FIXME: mean or median?
-    return(median(runs))
-  }
-
-  fun = function(x, ...) {
-    runs_a = run_multiple(x, algorithm_a, n_runs, args)
-    runs_b = run_multiple(x, algorithm_b, n_runs, args)
-    # What if we obtain negative values?
-    return(runs_a / runs_b)
-  }
-  return(fun)
+    return(aggr.fun(runs))
 }
 
-downScale = function(x, memorize = FALSE) {
-  ranges = apply(x, 2, range)
-  x[, 1] = (x[, 1] - ranges[1, 1])
-  x[, 2] = (x[, 2] - ranges[1, 2])
-  scale = max(ranges[2, ] - ranges[1, ])
-  if (memorize)
-    return(list(x = x / scale, ranges = ranges))
-  return(x / scale)
-}
-
-upScale = function(x, ranges) {
-  scale = max(ranges[2, ] - ranges[1, ])
-  x = x * scale
-  x[, 1L] = x[, 1L] + ranges[1, 1]
-  x[, 2L] = x[, 2L] + ranges[1, 2]
-  return(x)
-}
-
-doUniformItemsMutation = function(x, pm = 0.1, L = 1000, R = 10000) {
-  n = nrow(x)
-  k = floor(n * pm)
-  idx = sample(seq_len(n), size = k, replace = FALSE)
-  # column 1:profits, column 2: weights
-  x[idx, 1:2] = matrix(sample(L:R, size = 2 * k, replace = TRUE), ncol = 2L)
-  return(x)
-}
-
-doCorrelatedItemsMutation = function(x, pm = 0.1, L = 10, R = 100, negative_correlation = FALSE) {
-  n = nrow(x)
-  k = floor(n * pm)
-  R10 = R / 10 # for weakly correlated weights
-  corr.factor = if (negative_correlation) -1 else 1
-  idx = sample(seq_len(n), size = k, replace = FALSE)
-  weights.new = sample(L:R, size = k, replace = TRUE)
-  profits.new = floor(runif(k, weights.new - R10, weights.new + R10))
-  x[idx, 1:2] = cbind(profits.new, weights.new)
-  return(x)
-}
-
-doCapacityMutation = function(x, dev = 100) {
-  wsum = sum(x$items$weight)
-  wsum2 = floor(wsum / 2)
-  min = wsum2 - dev
-  max = wsum2 + dev
-  x$capacity = sample(min:max, size = 1L)
-  return(x)
-}
-
-applyMutationFromCollection = function(x, collection) {
-  mutators = collection$mutators
-  n.mutators = length(mutators)
-  names = names(mutators)
-  probs = if (is.null(collection$probs)) {
-    rep(1 / n.mutators, n.mutators)
-  }
-  idx = sample(seq_len(n.mutators), size = 1L, prob = probs)
-  mutator.fun = names[idx]
-  mutator.pars = mutators[[mutator.fun]]
-  mutator.pars = BBmisc::insert(list(x), mutator.pars)
-  y = do.call(mutator.fun, mutator.pars)
-  attr(y, "df") = NULL
-  return(y)
-}
-
-build_mutation = function(...) {
-  types = list(...)
-  print(types)
-  force(types)
-
-  fun = function(x, ...) {
-    checkmate::assertClass(x, "ttp_instance")
-    if (!is.null(types$kp)) {
-      if (runif(1L) < types$tsp$p) {
-
-        x$items[, 1:2] = applyMutationFromCollection(as.matrix(x$items[, 1:2]), types$kp$collection)
-      }
-    }
-    if (!is.null(types$tsp)) {
-      if (runif(1L) < types$tsp$p) {
-        x$coordinates = applyMutationFromCollection(as.matrix(x$coordinates), types$tsp$collection)
-      }
-    }
-    if (!is.null(types$meta)) {
-      if (runif(1L) < types$meta$p) {
-        x = applyMutationFromCollection(x, types$meta$collection)
-      }
-    }
-    return(x)
-  }
-  ecr::makeMutator(mutator = fun, supported = "custom")
+#' Run multiple heuristics multiple times.
+#'
+#' @description This is a helper function for final evaluations. Given a set of algorithms and
+#' an instance, each algorithm is run multiple times independently. The function returns a
+#' data frame.
+run_ttp_algorithms_for_evaluation = function(x, algorithms, n_runs, args) {
+  exp_grid = expand.grid(algorithm = algorithms, run = seq_len(n_runs), stringsAsFactors = FALSE)
+  exp_grid = re::rowsToList(exp_grid)
+  print(exp_grid)
+  results = lapply(exp_grid, function(setup) {
+    args2 = c(list(x = x, algorithm = setup$algorithm), args)
+    print(args2)
+    tmp = do.call(run_ttp_algorithm, args2)
+    tmp = as.data.frame(c(prob = tmp$prob, tmp$output), stringsAsFactors = FALSE)
+    tmp$run = setup$run
+    tmp$algorithm = setup$algorithm
+    return(tmp)
+  })
+  do.call(rbind, results)
 }
