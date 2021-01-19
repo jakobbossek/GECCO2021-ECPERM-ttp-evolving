@@ -9,7 +9,14 @@ source("r-src/fitness-functions.R")
 
 prob = "9competitionInstances/a280_n279_bounded-strongly-corr_01.ttp"
 
-#x = generate_random_ttp_instance(n = 200)
+x = generate_random_ttp_instance(n = 100, ipn = 10)
+
+
+feats = calculate_ttp_features(x)
+
+stop()
+
+TTP::writeProblem(x, path = "test_100_990.ttp")
 # res = run_ttp_algorithm(prob, algorithm = 21,
 # max_iters_without_improvement = 10000000L,
 # max_time = 15L)

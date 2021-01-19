@@ -44,39 +44,51 @@ build_fitness_function_generalized = function(algorithms, type, ranking, n_runs,
       run_ttp_algorithm_multiple_and_aggregate(x, algorithm, n_runs, args)
     })
 
+    get_performance_distance = function(p1, p2) {
+      p1 - p2
+    }
+
+    # handles issues
+    if (any(is.na(perfs))) {
+      return(NA)
+    }
+
     n = length(perfs)
+    #print(perfs)
     if (type == "pairwise") {
-      return(perfs[ranking[1L]] - perfs[ranking[2L]])
+      return(get_performance_distance(perfs[ranking[1L]], perfs[ranking[2L]]))
     } else if (type == "gap-to-second-best") {
       # MAXIMIZE the difference between the first algorithm and the second best
-      return(perfs[ranking[1L]] - max(perfs[-ranking[1L]]))
+      return(get_performance_distance(perfs[ranking[1L]], max(perfs[-ranking[1L]])))
     } else if (type == "no-order") {
       perfs_sorted = sort(perfs)
       p = 0
       for (i in 2:(n-1)) {
+        # here ps[1] <= ps[2] <= ... <= ps[n]
         p = p + (perfs_sorted[i] - perfs_sorted[i-1]) * (perfs_sorted[i+1] - perfs_sorted[i])
       }
       return(p)
     } else if (type == "explicit-ranking") {
-      # bad = 0
-      # good = 0
+      bad = 0
       p = 0
-      for (i in 1:(n-1)) {
-        for (j in (i+1):n) {
-          p = + + (perfs[ranking[i]] - perfs[ranking[j]])
-          # if (p < 0) {
-          #   bad = bad + p
-          # } else {
-          #   good = good + p
-          # }
+      for (i in 1:(n - 1)) {
+        for (j in (i + 1):n) {
+          # i should be better than j
+          perf_dist = get_performance_distance(perfs[ranking[i]], perfs[ranking[j]])
+          #catf("%i %i: %.3f", i, j, perf_dist)
+          if (perf_dist < 0) {
+            bad = bad + 1
+          } else {
+            p = p + perf_dist
+          }
         }
       }
-      return(c(bad, good))
+      # bad to be minimized, p to be maximized
+      return(c(bad, p))
     }
   }
   return(fun)
 }
-
 
 downScale = function(x, memorize = FALSE) {
   ranges = apply(x, 2, range)

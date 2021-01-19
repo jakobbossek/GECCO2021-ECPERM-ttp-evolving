@@ -60,9 +60,29 @@ run_ttp_algorithm = function(x, algorithm, exec_path,
     algorithm, max_iters_without_improvement, max_time, seed
   )
   command_string = BBmisc::collapse(c(command, args), sep = " ")
-  res = BBmisc::system3(command = command, args = args, stdout = TRUE, stderr = TRUE)
-  output = as.list(as.numeric(strsplit(res$output, split = " ")[[1L]][-1L]))
+  done = FALSE
+  max_tries = 5L
+  n_tries = 0
+  res = NULL
+  while (!done && (n_tries < max_tries)) {
+    n_tries = n_tries + 1
+    res = try({BBmisc::system3(command = command, args = args, stdout = TRUE, stderr = TRUE)})
+    done = !inherits(res, "try-error")
+  }
+
+  output = as.list(rep(NA, 7))
+  if (done) {
+    output = as.list(as.numeric(strsplit(res$output, split = " ")[[1L]][-1L]))
+  }
+  if (any(is.na(output)) || !done) {
+    output = as.list(rep(NA, 7))
+  }
   names(output) = c("capacity_free", "weight", "profit", "distance", "travel_time", "objective_score", "runtime")
+  BBmisc::catf("[debug] Run algorithm %i terminated (nt: %i, success: %i)", algorithm, n_tries, as.integer(done))
+
+  # delay too fast return
+  Sys.sleep(sample(1:3, 1))
+
   return(list(
     call = command_string,
     prob = x,
@@ -100,10 +120,10 @@ run_ttp_algorithm_multiple_and_aggregate = function(x, algorithm, n_runs, args, 
 run_ttp_algorithms_for_evaluation = function(x, algorithms, n_runs, args) {
   exp_grid = expand.grid(algorithm = algorithms, run = seq_len(n_runs), stringsAsFactors = FALSE)
   exp_grid = re::rowsToList(exp_grid)
-  print(exp_grid)
+  #print(exp_grid)
   results = lapply(exp_grid, function(setup) {
     args2 = c(list(x = x, algorithm = setup$algorithm), args)
-    print(args2)
+    #print(args2)
     tmp = do.call(run_ttp_algorithm, args2)
     tmp = as.data.frame(c(prob = tmp$prob, tmp$output), stringsAsFactors = FALSE)
     tmp$run = setup$run
@@ -111,4 +131,15 @@ run_ttp_algorithms_for_evaluation = function(x, algorithms, n_runs, args) {
     return(tmp)
   })
   do.call(rbind, results)
+}
+
+calculate_ttp_features = function(x) {
+  coord_tsp = salesperson::makeNetwork(coordinates = as.matrix(x$coordinates), name = "tsp", get.distances = TRUE)
+  coord_knapsack = salesperson::makeNetwork(coordinates = as.matrix(x$items[, c("weight", "profit")]), name = "knapsack", get.distances = TRUE)
+
+  feats_tsp = salesperson::getFeatureSet(coord_tsp, black.list = "VRP")
+  names(feats_tsp) = paste0("tsp_", names(feats_tsp))
+  feats_knapsack = salesperson::getFeatureSet(coord_knapsack, black.list = "VRP")
+  names(feats_knapsack) = paste0("knapsack_", names(feats_knapsack))
+  return(c(feats_tsp, feats_knapsack))
 }

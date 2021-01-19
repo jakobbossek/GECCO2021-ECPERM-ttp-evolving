@@ -42,16 +42,26 @@ EA_generalized = function(algorithms, type, ranking, args, n, ipn, max_time, mut
   max_time = checkmate::asInt(max_time)
 
   st = proc.time()
-  trace = numeric()
+  iter = 0L
 
   fitness_fun = build_fitness_function_generalized(algorithms, type, ranking, n_runs = 5, args)
 
-  x = generate_random_ttp_instance(n = n, ipn = ipn)
-  x_fitness = fitness_fun(x)
-  trace = c(trace, x_fitness)
+  tmp_ttp_file = basename(tempfile("tempttp", tmpdir = getwd(), fileext = ".ttp"))
+  on.exit(unlink(tmp_ttp_file))
+
+  x_fitness = NA
+  while (any(is.na(x_fitness))) {
+    x = generate_random_ttp_instance(n = n, ipn = ipn)
+    TTP::writeProblem(x, path = tmp_ttp_file, overwrite = TRUE)
+    x_fitness = fitness_fun(tmp_ttp_file)
+  }
 
   time_passed = (proc.time() - st)[3L]
+  trace = data.frame(iter = iter, time_passed = time_passed, fitness = x_fitness[length(x_fitness)])
+
   while (time_passed < max_time) {
+    iter = iter + 1L
+    fitness_eval_error = FALSE
     y = x
     # down-scale to [0,1]
     y$coordinates = downScale(y$coordinates)
@@ -65,24 +75,30 @@ EA_generalized = function(algorithms, type, ranking, args, n, ipn, max_time, mut
     y$capacity = as.integer(round((runif(1, min = 1, max = 10) / 11) * sum(y$items$weight)))
     y$items$profit = round((y$items$profit * 4400) + 1)
 
-    # evaluate
-    y_fitness = fitness_fun(y)
-    if (type != "explicit_ranking") {
-      if (y_fitness >= x_fitness) {
-        x = y
-        x_fitness = y_fitness
-      }
-    } else {
-      if (y_fitness[1L] > y_fitness[2L]) {
-        x = y
-        x_fitness = y_fitness
+    TTP::writeProblem(y, path = tmp_ttp_file, overwrite = TRUE)
+    # evaluate (tournament to avoid lucky samples)
+    y_fitness = fitness_fun(tmp_ttp_file)
+    #x_fitness = fitness_fun(x)
+
+    # Sometimes algorithms fail or for some reason parsing the results fails (rarely)
+    fitness_eval_error = any(is.na(y_fitness))
+    if (!fitness_eval_error) {
+      if (type != "explicit-ranking") {
+        if (y_fitness >= x_fitness) {
+          x = y
+          x_fitness = y_fitness
+        }
       } else {
-        # FIXME
+        # lecicographic order: y lex x <=> y[1] < x[1] or y[1] == x[1] and y[2] > x[2]
+         if ((y_fitness[1L] < x_fitness[1L]) | ((y_fitness[1L] == x_fitness[1L])) & (y_fitness[2L] > x_fitness[2L])) {
+          x = y
+          x_fitness = y_fitness
+        }
       }
     }
-    trace = c(trace, x_fitness)
     time_passed = (proc.time() - st)[3L]
-    re::catf("Best: %.2f, time passed: %.2f\n", x_fitness, time_passed)
+    trace = rbind(trace, data.frame(iter = iter, time_passed = time_passed, fitness = x_fitness[length(x_fitness)]))
+    re::catf("Iter: %i, Best: %.2f, time passed: %.2f%s\n", iter, x_fitness[length(x_fitness)], time_passed, ifelse(fitness_eval_error, " [errored]", ""))
   }
 
   return(list(x = x, trace = trace))
