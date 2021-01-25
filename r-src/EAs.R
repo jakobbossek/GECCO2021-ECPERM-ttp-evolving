@@ -1,42 +1,3 @@
-EA_pairwise = function(algorithms, args, n, ipn, max_time, mutator_fun) {
-  #checkmate::assert_integer(algorithms)
-  max_time = checkmate::asInt(max_time)
-
-  st = proc.time()
-
-  fitness_fun = build_fitness_function_pairwise(algorithms[1L], algorithms[2L], n_runs = 5, args)
-
-  x = generate_random_ttp_instance(n = n, ipn = ipn)
-  x_fitness = fitness_fun(x)
-
-  time_passed = (proc.time() - st)[3L]
-  while (time_passed < max_time) {
-    y = x
-    # down-scale to [0,1]
-    y$coordinates = downScale(y$coordinates)
-    y$items[, 1:2] = downScale(y$items[, 1:2])
-    # modify
-    y = mutator_fun(y)
-    # up-scale back
-
-    y$coordinates = round(y$coordinates * 10000)
-    y$items$weight = round((y$items$weight * 4040) + 1)
-    y$capacity = as.integer(round((runif(1, min = 1, max = 10) / 11) * sum(y$items$weight)))
-    y$items$profit = round((y$items$profit * 4400) + 1)
-
-    # evaluate
-    y_fitness = fitness_fun(y)
-    if (y_fitness <= x_fitness) {
-      x = y
-      x_fitness = y_fitness
-    }
-    time_passed = (proc.time() - st)[3L]
-    print(time_passed)
-  }
-
-  return(list(x = x))
-}
-
 EA_generalized = function(algorithms, type, ranking, args, n, ipn, max_time, mutator_fun) {
   #checkmate::assert_integer(algorithms)
   max_time = checkmate::asInt(max_time)
@@ -46,18 +7,32 @@ EA_generalized = function(algorithms, type, ranking, args, n, ipn, max_time, mut
 
   fitness_fun = build_fitness_function_generalized(algorithms, type, ranking, n_runs = 5, args)
 
-  tmp_ttp_file = basename(tempfile("tempttp", tmpdir = getwd(), fileext = ".ttp"))
-  on.exit(unlink(tmp_ttp_file))
+  tmpdir = "../../../../dev/shm/bossek-ttp/"
+  #tmpdir_linkern = tmpdir
+
+  if (!dir.exists(tmpdir))
+    dir.create(tmpdir, recursive = TRUE)
+  on.exit(unlink(tmpdir, recursive = TRUE))
+
+  tmp_ttp_file = tempfile("tempttp", tmpdir = tmpdir, fileext = ".ttp")
+  BBmisc::catf("Writing temp file to %s", tmp_ttp_file)
 
   x_fitness = NA
   while (any(is.na(x_fitness))) {
     x = generate_random_ttp_instance(n = n, ipn = ipn)
+    if (!dir.exists(tmpdir)) {
+      dir.create(tmpdir)
+    }
     TTP::writeProblem(x, path = tmp_ttp_file, overwrite = TRUE)
     x_fitness = fitness_fun(tmp_ttp_file)
   }
 
   time_passed = (proc.time() - st)[3L]
-  trace = data.frame(iter = iter, time_passed = time_passed, fitness = x_fitness[length(x_fitness)])
+  fittrack = x_fitness
+  if (length(x_fitness) == 1L)
+    fittrack = c(fittrack, NA, NA)
+
+  trace = data.frame(iter = iter, time_passed = time_passed, fitness1 = fittrack[1], fitness2 = fittrack[2], fitness3 = fittrack[3L])
 
   while (time_passed < max_time) {
     iter = iter + 1L
@@ -75,10 +50,30 @@ EA_generalized = function(algorithms, type, ranking, args, n, ipn, max_time, mut
     y$capacity = as.integer(round((runif(1, min = 1, max = 10) / 11) * sum(y$items$weight)))
     y$items$profit = round((y$items$profit * 4400) + 1)
 
+    stwr = proc.time()
+    if (!dir.exists(tmpdir)) {
+      dir.create(tmpdir)
+    }
     TTP::writeProblem(y, path = tmp_ttp_file, overwrite = TRUE)
+    BBmisc::catf("Time to write problem: %.2f", (proc.time() - stwr)[3L])
     # evaluate (tournament to avoid lucky samples)
     y_fitness = fitness_fun(tmp_ttp_file)
     #x_fitness = fitness_fun(x)
+
+    is_lexicographically_larger = function(x, y) {
+      n = length(x)
+      for (i in seq_len(n)) {
+        if (x[i] > y[i]) {
+          return(TRUE)
+        } else if (x[i] < y[i]) {
+          return (FALSE)
+        }
+      }
+      return (TRUE) # if x[i] == y[i] for all i in [n]
+    }
+
+    # print(y_fitness)
+    # print(x_fitness)
 
     # Sometimes algorithms fail or for some reason parsing the results fails (rarely)
     fitness_eval_error = any(is.na(y_fitness))
@@ -90,16 +85,22 @@ EA_generalized = function(algorithms, type, ranking, args, n, ipn, max_time, mut
         }
       } else {
         # lecicographic order: y lex x <=> y[1] < x[1] or y[1] == x[1] and y[2] > x[2]
-         if ((y_fitness[1L] < x_fitness[1L]) | ((y_fitness[1L] == x_fitness[1L])) & (y_fitness[2L] > x_fitness[2L])) {
+         if (is_lexicographically_larger(y_fitness, x_fitness)) {
           x = y
           x_fitness = y_fitness
         }
       }
     }
     time_passed = (proc.time() - st)[3L]
-    trace = rbind(trace, data.frame(iter = iter, time_passed = time_passed, fitness = x_fitness[length(x_fitness)]))
-    re::catf("Iter: %i, Best: %.2f, time passed: %.2f%s\n", iter, x_fitness[length(x_fitness)], time_passed, ifelse(fitness_eval_error, " [errored]", ""))
+    fittrack = x_fitness
+    if (length(x_fitness) == 1L)
+      fittrack = c(fittrack, NA, NA)
+
+    trace = rbind(trace, data.frame(iter = iter, time_passed = time_passed, fitness1 = fittrack[1], fitness2 = fittrack[2], fitness3 = fittrack[3L]))
+    re::catf("Iter: %i, Best: (%.2f, %.2f, %.2f), time passed: %.2f%s\n", iter, fittrack[1L], fittrack[2L], fittrack[3L], time_passed, ifelse(fitness_eval_error, " [errored]", ""))
   }
+
+  re::catf("EA TERMINATED.\n")
 
   return(list(x = x, trace = trace))
 }

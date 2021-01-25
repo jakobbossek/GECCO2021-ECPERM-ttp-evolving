@@ -69,22 +69,39 @@ build_fitness_function_generalized = function(algorithms, type, ranking, n_runs,
       }
       return(p)
     } else if (type == "explicit-ranking") {
-      bad = 0
-      p = 0
-      for (i in 1:(n - 1)) {
-        for (j in (i + 1):n) {
-          # i should be better than j
-          perf_dist = get_performance_distance(perfs[ranking[i]], perfs[ranking[j]])
-          #catf("%i %i: %.3f", i, j, perf_dist)
-          if (perf_dist < 0) {
-            bad = bad + 1
-          } else {
-            p = p + perf_dist
-          }
+      # bad and good tuples
+      B = list()
+      G = list()
+      # values of bad and good sets
+      pB = 0
+      pG = 0
+      # determine sets
+      for (i in 1:(n-1)) {
+        if (perfs[ranking[i]] >= perfs[ranking[i+1]]) {
+          G = c(G, list(c(i, i+1)))
+        } else {
+          B = c(B, list(c(i, i+1)))
         }
       }
-      # bad to be minimized, p to be maximized
-      return(c(bad, p))
+      nB = length(B)
+      nG = length(G)
+      if (nB == 0) {
+        pB = 0 # infty
+      } else {
+        for (pair in B) {
+          pB = pB + (perfs[ranking[pair[1L]]] - perfs[ranking[pair[2L]]])
+        }
+      }
+      if (nG == 0) {
+        pG = -1e15
+      } else {
+        for (pair in G) {
+          pG = pG + (perfs[ranking[pair[1L]]] - perfs[ranking[pair[2L]]])
+        }
+      }
+
+      # bad to be maximized in lexicographical order
+      return(c(nG, pB, pG))
     }
   }
   return(fun)

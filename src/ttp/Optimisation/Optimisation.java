@@ -130,7 +130,7 @@ public class Optimisation {
         return s;
     }
         
-    public static TTPSolution randomLinkernTours(TTPInstance instance, long maxRunTime) {
+    public static TTPSolution randomLinkernTours(TTPInstance instance, long maxRunTime, String tempFileDirLinkerntours) {
     	ttp.Utils.Utils.startTiming();
     	long startTime = System.currentTimeMillis();
     	int numIterations = 0;
@@ -145,7 +145,7 @@ public class Optimisation {
     	TreeSet tours = new TreeSet();
     	while (elapsedTime <= maxRunTime) {
     		// Generate a new linkern tour
-        	int[] linTour = linkernTour(instance.file.getPath(), instance.numberOfNodes+1);
+        	int[] linTour = linkernTour(instance.file.getPath(), instance.numberOfNodes+1, tempFileDirLinkerntours);
         	String linTourConverted = Arrays.toString(linTour);
             if(tours.contains(linTourConverted)){//
              	continue;
@@ -825,7 +825,7 @@ public static TTPSolution insertionReverse(TTPInstance instance, int[] tour, int
 //        return result;
 //    }
     
-    public static int[] linkernTour(String tourFileName, int numNodes) {
+    public static int[] linkernTour(String tourFileName, int numNodes, String tempFileDirLinkerntours) {
         int[] result = new int[numNodes];
         
         boolean debugPrint = false;
@@ -834,7 +834,14 @@ public static TTPSolution insertionReverse(TTPInstance instance, int[] tour, int
         int index = temp.indexOf("_");
         String tspfilename = temp;
         if (index==-1) index = tspfilename.indexOf(".");
-        String tspresultfilename = System.getProperty("user.dir") + File.separator + temp.substring(0,index)+".linkern.tour."+rnd.nextDouble();
+        //String tspresultfilename = System.getProperty("user.dir") + File.separator + temp.substring(0,index)+".linkern.tour."+rnd.nextDouble(); // commented out on 210121 to allow for linkern tours to be written to other directories
+//        String tspresultfilename = tempFileDirLinkerntours + File.separator + temp.substring(2,index)+".linkern.tour."+rnd.nextDouble();
+        String tspresultfilename = tempFileDirLinkerntours + File.separator + tourFileName.substring(tourFileName.lastIndexOf(File.separator)).substring(1) +".linkern.tour."+rnd.nextDouble();
+        
+        
+        
+//        System.out.println(tspresultfilename+ " tourFileName="+tourFileName+ " File.separator:"+File.separator);
+        
 //        String tspresultfilename = System.getProperty("user.dir") + "/" + temp.substring(0,index)+".linkern.tour.alt";
         if (debugPrint) {
             System.out.println("LINKERN: "+tspfilename+ " -o "+tspresultfilename);
@@ -879,7 +886,11 @@ public static TTPSolution insertionReverse(TTPInstance instance, int[] tour, int
                 if(System.getProperty("os.name").contains("Windows")){//WINDOWS OS
                     // nop: gets skipped since there are currently problems with linkern.exe and Windows 10
                     // with the following line we do not generated a new one but rely on an existing ttp.tour file on the disk
-                    tspresultfilename = System.getProperty("user.dir") + File.separator + temp.substring(0,index)+".linkern.tour";                    
+//                    tspresultfilename = System.getProperty("user.dir") + File.separator + temp.substring(0,index)+".linkern.tour";                    
+//                    tspresultfilename = tempFileDirLinkerntours + File.separator + temp.substring(2,index)+".linkern.tour";                    
+//                    tspresultfilename = tempFileDirLinkerntours + temp.substring(2,index)+".linkern.tour";                    
+                    tspresultfilename = tempFileDirLinkerntours + File.separator + tourFileName.substring(tourFileName.lastIndexOf(File.separator)).substring(1) +".linkern.tour."+rnd.nextDouble();
+                    
         	} else {//LINUX
                     ProcessBuilder builder = new ProcessBuilder(command);
                     builder.redirectErrorStream(true);
@@ -1026,7 +1037,7 @@ public static TTPSolution insertionReverse(TTPInstance instance, int[] tour, int
     ///////////////////////////////////////////////////////
     // HEURISTIC TESTER
     ///////////////////////////////////////////////////////
-    public static TTPSolution HT(TTPInstance instance, long maxRunTime, boolean runOnce) {
+    public static TTPSolution HT(TTPInstance instance, long maxRunTime, boolean runOnce, String tempFileDirLinkerntours) {
     	ttp.Utils.Utils.startTiming();
     	long startTime = System.currentTimeMillis();
     	long elapsedTime = 0;
@@ -1047,7 +1058,7 @@ public static TTPSolution insertionReverse(TTPInstance instance, int[] tour, int
     	while (elapsedTime <= maxRunTime && runOnceCheck) {
             // Generate a new linkern tours
             if (debugPrint) System.out.println("(generate...)");
-            int[] linTour = linkernTour(instance.file.getPath(), instance.numberOfNodes+1);
+            int[] linTour = linkernTour(instance.file.getPath(), instance.numberOfNodes+1, tempFileDirLinkerntours);
             String linTourConverted = Arrays.toString(linTour);
             elapsedTime = System.currentTimeMillis() - startTime;
             

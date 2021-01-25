@@ -39,7 +39,8 @@ public class Driver {
     public static void main(String[] args) {
        
         if (args.length==0) 
-        	args = new String[]{"instances", "eil51_n150_bounded-strongly-corr_06.ttp",
+//        	args = new String[]{"instances", "eil51_n150_bounded-strongly-corr_06.ttp",
+                args = new String[]{".", "test_100_990.ttp",
 //        	args = new String[]{"instances", "d657_n6560_bounded-strongly-corr_01.ttp", // PSSD
 //        	args = new String[]{"instances", "d657_n3280_bounded-strongly-corr_01.ttp", // PSSD
 //        	args = new String[]{"instances", "a280_n837_bounded-strongly-corr_01.ttp", // PSSD
@@ -65,7 +66,7 @@ public class Driver {
         	//args = new String[]{"instances", "pla85900_n858990_bounded-strongly-corr_01",
         	//args = new String[]{"instances70", "",
 //            args=new String[]{"instances/eil51_sub","eil51_n08_m35_multiple-strongly-corr_10.ttp",//"eil51_n05_m20_uncorr_06.ttp",
-            "-1", "10000", (20*1000)+"", "321"};//10mins, algorithm number 24 is algorithm S5 (best performing) from the GECCO 2015 article          last number: seed
+            "24", "100000", (20*1000)+"", "321", "/tmp"};//10mins, algorithm number 24 is algorithm S5 (best performing) from the GECCO 2015 article          last number: seed
         
 //        args=new String[]{"instances/","test-example-n4.txt","1", "10000", (20*1000)+"", "321"};
         
@@ -81,7 +82,7 @@ public class Driver {
     {
         // if seed provided then use it, otherwise pick a random number
         int seed = -1;
-        if (args.length==6) {
+        if (args.length==7) {
             seed = Integer.parseInt(args[5]);
         } else {
             seed = (int)(Math.random()*Integer.MAX_VALUE);
@@ -91,6 +92,8 @@ public class Driver {
         
         // get file list based on the provided file name pattern (note: often, this will result in only one file)
         File files[] = Utils.getFileList(args);
+        
+        String tempFileDirLinkerntours = args[6];
         
         if (files.length==0) {
             System.out.println("ERROR: no files found to match the pattern "+args[1]+" in directory "+args[0]);
@@ -113,7 +116,7 @@ public class Driver {
 
             
 //            TTPSolution newSolution = null;
-            TTPSolution newSolution = new TTPSolution(Optimisation.linkernTour(instance.file.getPath(), instance.numberOfNodes+1), new int[instance.numberOfItems]);
+            TTPSolution newSolution = new TTPSolution(Optimisation.linkernTour(instance.file.getPath(), instance.numberOfNodes+1, tempFileDirLinkerntours), new int[instance.numberOfItems]);
             instance.evaluate(newSolution, false);
         
 //            System.out.println("ALGORITHM="+algorithm);
@@ -167,17 +170,17 @@ public class Driver {
                     resultTitle += instance.file.getName() + ".ppGreedyRegardTour_flip." + startTime;
                     break;
             case 6: //Exercise 3 : Algorithm 2 : Continuous tour building, flipping, and PP assignment
-                    newSolution=Optimisation.randomLinkernTours(instance, maxRuntime);
+                    newSolution=Optimisation.randomLinkernTours(instance, maxRuntime, tempFileDirLinkerntours);
                     resultTitle += instance.file.getName() + ".randomLinkernTours_ppGreedyRegardTour_flip." +newSolution.objectiveScore+"."+ startTime;
                     break;
             case 7: //Exercise 3 : Algorithm 3 : A2 + insertion
-                    TTPSolution tmpSolution=Optimisation.randomLinkernTours(instance, maxRuntime-(int)(instance.numberOfItems*.001));
+                    TTPSolution tmpSolution=Optimisation.randomLinkernTours(instance, maxRuntime-(int)(instance.numberOfItems*.001), tempFileDirLinkerntours);
                     newSolution = Optimisation.insertionReverse(instance, tmpSolution.tspTour, tmpSolution.packingPlan, (int)(instance.numberOfItems*.001),0);
                     resultTitle += instance.file.getName() + ".randomLinkernTours_ppGreedyRegardTour_flip_insert." + startTime;
                     break; 
             case 8: //UP-TO-DATE METHOD :: New heuristic + bitFilp convergence
                     //tmpSolution = Optimisation.HT(instance, 10000);
-                    newSolution = Optimisation.HT(instance, 60000L, false);
+                    newSolution = Optimisation.HT(instance, 60000L, false, tempFileDirLinkerntours);
                     newSolution.altPrint();
                     newSolution.printFull();
                     boolean improved = true;
@@ -215,7 +218,7 @@ public class Driver {
             case 20:
             {
                 resultTitle = (instance.file.getName() + ".rt3once." + startTime);
-                newSolution = Optimisation.HT(instance, maxRuntime, true);
+                newSolution = Optimisation.HT(instance, maxRuntime, true, tempFileDirLinkerntours);
                 break;
             }
 
@@ -223,7 +226,7 @@ public class Driver {
             case 21: // '\025'
             {
                 resultTitle = (instance.file.getName() + ".rt3onceBitflip." + startTime);
-                newSolution = Optimisation.HT(instance, maxRuntime, true);
+                newSolution = Optimisation.HT(instance, maxRuntime, true, tempFileDirLinkerntours);
                 long timePassed = System.currentTimeMillis() - startTime;
                 int maxRuntimeLeft = (int)((long)maxRuntime - (timePassed + 10L));
 //                System.out.println("XXX"+maxRuntimeLeft/1000+"XXX");
@@ -235,7 +238,7 @@ public class Driver {
             case 22:
             {
                 resultTitle = (instance.file.getName() + ".rt3onceEA." + startTime);
-                newSolution = Optimisation.HT(instance, maxRuntime, true);
+                newSolution = Optimisation.HT(instance, maxRuntime, true, tempFileDirLinkerntours);
                 long timePassed = System.currentTimeMillis() - startTime;
                 int maxRuntimeLeft = (int)((long)maxRuntime - (timePassed + 10L));
                 newSolution = Optimisation.hillClimber(instance, newSolution.tspTour, newSolution.packingPlan, 2, 0x7fffffff, maxRuntimeLeft);
@@ -246,7 +249,7 @@ public class Driver {
             case 23:
             {
                 resultTitle = (instance.file.getName() + ".rt3onceINSERTION." + startTime);
-                newSolution = Optimisation.HT(instance, maxRuntime, true);
+                newSolution = Optimisation.HT(instance, maxRuntime, true, tempFileDirLinkerntours);
 //                if (true) System.out.println("23: HT done");
                 long timePassed = System.currentTimeMillis() - startTime;
                 int maxRuntimeLeft = (int)((long)maxRuntime - (timePassed + 10L));
@@ -265,7 +268,7 @@ public class Driver {
                 {
                     starttime = System.currentTimeMillis();
                     resultTitle = (instance.file.getName() + ".rt3." + startTime);
-                    TTPSolution tempSolution = Optimisation.HT(instance, maxRuntime, true);
+                    TTPSolution tempSolution = Optimisation.HT(instance, maxRuntime, true, tempFileDirLinkerntours);
                     if(newSolution == null || tempSolution.objectiveScore > newSolution.objectiveScore)
                         newSolution = tempSolution;
                     currenttime = System.currentTimeMillis();
@@ -292,11 +295,11 @@ public class Driver {
                 TTPSolution newSolutionInner = null;
                 if (algorithm==25 || algorithm==26 || algorithm==29 || algorithm==30) {
                     // one tour
-                    newSolutionInner = Optimisation.HT(instance, maxRuntime, true);
+                    newSolutionInner = Optimisation.HT(instance, maxRuntime, true, tempFileDirLinkerntours);
                 } else 
                 if (algorithm==27 || algorithm==28) {
                     // several times, for 10% of the maxRuntime
-                    newSolutionInner = Optimisation.HT(instance, maxRuntime/10, false);
+                    newSolutionInner = Optimisation.HT(instance, maxRuntime/10, false, tempFileDirLinkerntours);
 //                    System.out.println("27/28: Optimisation.HT done");
                 }
                 if (newSolution==null) newSolution=newSolutionInner;
@@ -406,7 +409,7 @@ public class Driver {
         }
     }
 
-    public static void investigateDifferentLinkernTours(String[] args, int times){
+    public static void investigateDifferentLinkernTours(String[] args, int times, String tempFileDirLinkerntours){
         boolean debugPrint = true;
         boolean draw = true;
         File[] files = ttp.Utils.Utils.getFileList(args);
@@ -418,7 +421,7 @@ public class Driver {
 
         for (int i = 0; i<times; i++) {
             // Generate a new linkern tour
-            int[] linTour = Optimisation.linkernTour(instance.file.getPath(), instance.numberOfNodes+1);
+            int[] linTour = Optimisation.linkernTour(instance.file.getPath(), instance.numberOfNodes+1,tempFileDirLinkerntours);
             
             //Draw the tours to .png image
             File f = new File("graphs/"+instance.file.getName().substring(0,instance.file.getName().indexOf('_')));

@@ -34,7 +34,7 @@
 #'   \item{raw_output [\code{list}]}{Raw output of \code{\link[BBmisc]{system3}.}
 #' }
 run_ttp_algorithm = function(x, algorithm, exec_path,
-  max_iters_without_improvement = 10000L, max_time, seed = ceiling(runif(1, min = 1, max = 10000)), ...) {
+  max_iters_without_improvement = 10000L, max_time, seed = ceiling(runif(1, min = 1, max = 100000)), ...) {
 
   # temporarily export if loaded instance is passed
   if (checkmate::test_class(x, "ttp_instance")) {
@@ -45,25 +45,31 @@ run_ttp_algorithm = function(x, algorithm, exec_path,
     on.exit(unlink(x))
   }
 
+  #BBmisc::catf("Reading file from %s", x)
+
   if (!checkmate::test_file_exists(x, access = "r", extension = "ttp")) {
     re::catf("[run_ttp_algorithm] File not found.")
   }
 
-  instance_folder = paste0(dirname(x), "/")
+  instance_folder = dirname(x)
   # obviously the java implementation does not work with absolute path
   #instance_folder = "./"
   instance_filename = basename(x)
-
+  #TODO: hard-coded! :(
+  tmp_dir_linkern = "../../../../dev/shm/bossek-ttp/"
   command = "java"
   args = c(
     "-cp build/classes/ Driver", instance_folder, instance_filename,
-    algorithm, max_iters_without_improvement, max_time, seed
+    algorithm, max_iters_without_improvement, max_time, seed,
+    tmp_dir_linkern
   )
   command_string = BBmisc::collapse(c(command, args), sep = " ")
+  #BBmisc::catf("[Call] %s", command_string)
   done = FALSE
   max_tries = 5L
   n_tries = 0
   res = NULL
+  st = proc.time()
   while (!done && (n_tries < max_tries)) {
     n_tries = n_tries + 1
     res = try({BBmisc::system3(command = command, args = args, stdout = TRUE, stderr = TRUE)})
@@ -79,9 +85,10 @@ run_ttp_algorithm = function(x, algorithm, exec_path,
   }
   names(output) = c("capacity_free", "weight", "profit", "distance", "travel_time", "objective_score", "runtime")
   BBmisc::catf("[debug] Run algorithm %i terminated (nt: %i, success: %i)", algorithm, n_tries, as.integer(done))
+  BBmisc::catf("Run took %.2f [s] (max time is %.2f [s])", (proc.time() - st)[3L], max_time)
 
   # delay too fast return
-  Sys.sleep(sample(1:3, 1))
+  #Sys.sleep(sample(1:3, 1))
 
   return(list(
     call = command_string,

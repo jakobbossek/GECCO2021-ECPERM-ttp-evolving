@@ -4,13 +4,13 @@ N_RUNS_FOR_EVALUATION = 30L # to discuss with MW
 MAX_TIME_FOR_EACH_SOLVER_RUN = 10
 MAX_ITERS_WITHOUT_IMPROVEMENT = 100000L # to discuss with MW
 
-INSTANCE_SIZES = 100L
+INSTANCE_SIZES = 250L
 IPN = c(1, 3, 5, 10)
-GENERALIZED_FITNESS_TYPES = c("gap-to-second-best", "no-order", "explicit-ranking")
+GENERALIZED_FITNESS_TYPES = c("no-order", "explicit-ranking") # "gap-to-second-best"
 N_INSTANCES = 50L
 
-WALLTIME = 60 * 60 * 10 #22 #60 * 60 * 23.5
-WALLTIME_ON_NODE = 60 * 60 * 12 # 24
+WALLTIME = 60 * 60 * 22.5 #22 #60 * 60 * 23.5
+WALLTIME_ON_NODE = 60 * 60 * 24 # 24
 
 R_BOUNDS = c(0, 1000)
 C_BOUNDS = c(1, 10) # left open

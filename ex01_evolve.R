@@ -51,7 +51,11 @@ batchtools::addAlgorithm("EA", fun = function(job, data, ...) {
   if (!dir.exists(dirname(fn)))
     dir.create(dirname(fn), recursive = TRUE)
 
-  tmp_ttp_file = basename(tempfile("tempttp", tmpdir = getwd(), fileext = ".ttp"))
+  tmpdir = "../../../../dev/shm/bossek-ttp/"
+  if (!dir.exists(tmpdir)) {
+    dir.create(tmpdir)
+  }
+  tmp_ttp_file = basename(tempfile("tempttp", tmpdir = tmpdir, fileext = ".ttp"))
   TTP::writeProblem(ea_res$x, path = tmp_ttp_file)
   eval_res = run_ttp_algorithms_for_evaluation(tmp_ttp_file, ALL_ALGORITHMS, N_RUNS_FOR_EVALUATION, solver_args)
   unlink(tmp_ttp_file)
@@ -70,7 +74,7 @@ batchtools::addAlgorithm("EA", fun = function(job, data, ...) {
     dir.create(dirname(fn), recursive = TRUE)
   write.table(ea_res$trace, file = fn, row.names = FALSE)
 
-  return(list(eval_res = eval_res))
+  return(list(eval_res = eval_res, trace = ea_res$trace))
 })
 
 
@@ -85,18 +89,16 @@ pairwise_rankings = make_rankings(3, 2)
 generalized_rankings = make_rankings(3)
 
 EA_design_pairwise = data.table::CJ(
-  instance_size = INSTANCE_SIZES, # only 100 for now
+  instance_size = INSTANCE_SIZES, # only 250 for now
   ipn = IPN,
   ranking = pairwise_rankings,
-  type = "pairwise",
-  method = "pairwise")
+  type = "pairwise")
 
 EA_design_generalized = data.table::CJ(
-  instance_size = INSTANCE_SIZES, # only 100 for now
+  instance_size = INSTANCE_SIZES, # only 250 for now
   ipn = IPN,
-  ranking =generalized_rankings,
-  type = GENERALIZED_FITNESS_TYPES,
-  method = "generalized")
+  ranking = generalized_rankings,
+  type = GENERALIZED_FITNESS_TYPES)
 
 algo.designs = list(EA = rbind(EA_design_pairwise, EA_design_generalized))
 
@@ -105,6 +107,9 @@ batchtools::addExperiments(algo.designs = algo.designs, repls = N_INSTANCES)
 BBmisc::pause()
 
 ids = batchtools::findExperiments(repls = seq_len(10))
-ids = findNotDone()
-ids = ids[sample(1:nrow(ids), 10), ]
+ids = findNotDone(ids)
+#ids = ids[sample(1:nrow(ids), 10), ]
 submitJobs(ids, resources = list(mem = 8000, walltime = WALLTIME_ON_NODE))
+
+
+stop("DONE")
