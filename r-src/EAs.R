@@ -1,14 +1,9 @@
-EA_generalized = function(algorithms, type, ranking, args, n, ipn, max_time, mutator_fun) {
+EA_generalized = function(fitness_fun, type, n, ipn, max_time, mutator_fun, tmpdir) {
   #checkmate::assert_integer(algorithms)
   max_time = checkmate::asInt(max_time)
 
   st = proc.time()
   iter = 0L
-
-  fitness_fun = build_fitness_function_generalized(algorithms, type, ranking, n_runs = 5, args)
-
-  tmpdir = "../../../../dev/shm/bossek-ttp/"
-  #tmpdir_linkern = tmpdir
 
   if (!dir.exists(tmpdir))
     dir.create(tmpdir, recursive = TRUE)
@@ -49,6 +44,11 @@ EA_generalized = function(algorithms, type, ranking, args, n, ipn, max_time, mut
     y$items$weight = round((y$items$weight * 4040) + 1)
     y$capacity = as.integer(round((runif(1, min = 1, max = 10) / 11) * sum(y$items$weight)))
     y$items$profit = round((y$items$profit * 4400) + 1)
+
+    opar = par(mfrow = c(1, 2))
+    plot(y$coordinates)
+    plot(y$items[, c("weight", "profit")])
+    par(opar)
 
     stwr = proc.time()
     if (!dir.exists(tmpdir)) {
@@ -104,29 +104,6 @@ EA_generalized = function(algorithms, type, ranking, args, n, ipn, max_time, mut
 
   return(list(x = x, trace = trace))
 }
-
-
-# $ name            : chr "a280-TTP"
-#  $ type            : chr "bounded strongly corr"
-#  $ n               : int 280
-#  $ m               : int 279
-#  $ capacity        : num 25936
-#  $ vmin            : num 0.1
-#  $ vmax            : num 1
-#  $ R               : num 5.61
-#  $ edge_weight_type: chr "CEIL_2D"
-#  $ coordinates     :'data.frame': 280 obs. of  2 variables:
-#   ..$ V2: int [1:280] 288 288 270 256 256 246 236 228 228 220 ...
-#   ..$ V3: int [1:280] 149 129 133 141 157 157 169 169 161 169 ...
-#  $ distance.matrix : num [1:280, 1:280] 0 20 24.1 33 33 ...
-#   ..- attr(*, "dimnames")=List of 2
-#   .. ..$ : chr [1:280] "1" "2" "3" "4" ...
-#   .. ..$ : chr [1:280] "1" "2" "3" "4" ...
-#  $ items           :'data.frame': 279 obs. of  3 variables:
-#   ..$ profit: int [1:279] 101 202 404 202 996 1992 3984 467 934 1868 ...
-#   ..$ weight: int [1:279] 1 2 4 2 896 1792 3584 367 734 1468 ...
-#   ..$ nodenr: int [1:279] 2 3 4 5 6 7 8 9 10 11 ...
-#  - attr(*, "class")= chr [1:2] "ttp_instance" "tsp_instance"
 
 #' Generate random TTP instance.
 #'

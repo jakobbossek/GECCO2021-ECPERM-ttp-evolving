@@ -1,16 +1,16 @@
 ALL_ALGORITHMS = c(21, 23, 26)
-N_RUNS_DURING_EVOLUTION = 5L
+N_RUNS_DURING_EVOLUTION = 11L
 N_RUNS_FOR_EVALUATION = 30L # to discuss with MW
 MAX_TIME_FOR_EACH_SOLVER_RUN = 10
 MAX_ITERS_WITHOUT_IMPROVEMENT = 100000L # to discuss with MW
 
-INSTANCE_SIZES = 250L
-IPN = c(1, 3, 5, 10)
+INSTANCE_SIZES = c(100)
+IPN = c(1, 3, 5)#,10)
 GENERALIZED_FITNESS_TYPES = c("no-order", "explicit-ranking") # "gap-to-second-best"
-N_INSTANCES = 50L
+N_INSTANCES = 10L
 
-WALLTIME = 60 * 60 * 22.5 #22 #60 * 60 * 23.5
-WALLTIME_ON_NODE = 60 * 60 * 24 # 24
+WALLTIME = 60 * 60 * 30 #22 #60 * 60 * 23.5
+WALLTIME_ON_NODE = 60 * 60 * 32 # 24
 
 R_BOUNDS = c(0, 1000)
 C_BOUNDS = c(1, 10) # left open
@@ -21,5 +21,9 @@ WEIGHT_BOUNDS = c(1, 4040)
 PROFIT_BOUNDS = c(1, 4400)
 NODE_COORDINATE_BOUNDS = c(0, 10000)
 
+TMP_DIR = "../../../../dev/shm/bossek-ttp/"
+TMP_DIR = "/Users/bossek/tmp/ttp_evolve"
+
 OUTPUT_PATH = "/scratch/tmp/bossek/ttp_evolve/data"
-#OUTPUT_PATH = "/Users/bossek/scratch/tmp/bossek/ttp_evolve/data"
+#OUTPUT_PATH = "/Users/bossek/scratch/ttp_evolve/data"
+#OUTPUT_PATH= "data/"

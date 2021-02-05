@@ -57,6 +57,7 @@ run_ttp_algorithm = function(x, algorithm, exec_path,
   instance_filename = basename(x)
   #TODO: hard-coded! :(
   tmp_dir_linkern = "../../../../dev/shm/bossek-ttp/"
+  tmp_dir_linkern = "/Users/bossek/tmp/ttp_evolve"
   command = "java"
   args = c(
     "-cp build/classes/ Driver", instance_folder, instance_filename,

@@ -25,7 +25,7 @@ doRentingRateMutation = function(x, min = 1, max = 1000) {
   return(x)
 }
 
-applyMutationFromCollection = function(x, collection) {
+applyMutationFromCollection = function(x, collection, drop.attr = TRUE) {
   mutators = collection$mutators
   n.mutators = length(mutators)
   names = names(mutators)
@@ -37,7 +37,9 @@ applyMutationFromCollection = function(x, collection) {
   mutator.pars = mutators[[mutator.fun]]
   mutator.pars = BBmisc::insert(list(x), mutator.pars)
   y = do.call(mutator.fun, mutator.pars)
-  attr(y, "df") = NULL
+  #y = forceToBounds(y)
+  if (drop.attr)
+    attr(y, "df") = NULL
   return(y)
 }
 
@@ -50,6 +52,7 @@ build_mutation = function(...) {
     checkmate::assertClass(x, "ttp_instance")
     if (!is.null(types$kp)) {
       if (runif(1L) < types$kp$p) {
+        #TODO: remove the rescale stuff here and for coordinates and run experiments again!
         x$items[, 1:2] = netgen:::rescaleNetworkGlobal2(applyMutationFromCollection(as.matrix(x$items[, 1:2]), types$kp$collection))
       }
     }

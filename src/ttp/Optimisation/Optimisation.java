@@ -865,7 +865,13 @@ public static TTPSolution insertionReverse(TTPInstance instance, int[] tour, int
                 command.add(rnd.nextInt()+"");
         	command.add("-o");
         	command.add(tspresultfilename);
-        	command.add(tspfilename);
+                
+                // added on 28 Jan 2021 to greatly increase the diversity in the resulting tours: the number of 'kicks' to the locally optimal tour is set to 0 (default: number of cities)
+                // (see Section 6.1.4 of http://akira.ruc.dk/~keld/research/LKH/KoptReport.pdf)
+                command.add("-R");
+                command.add("0");
+        	
+                command.add(tspfilename);
         	
 //        	ProcessBuilder builder = new ProcessBuilder(command);
 //        	builder.redirectErrorStream(true);
@@ -949,6 +955,8 @@ public static TTPSolution insertionReverse(TTPInstance instance, int[] tour, int
            	}
         
         (new File(tspresultfilename)).delete();
+        
+//        System.out.println("linkernTour:"+Arrays.toString(result));
         
         return result;
     }
