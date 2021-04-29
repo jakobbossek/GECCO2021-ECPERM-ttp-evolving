@@ -25,7 +25,7 @@ plot_ttp = function(coords, items) {
     g = g + theme_bw()
     if (any(x$mutated)) {
       g = g + geom_point(aes(shape = Mutated, color = Mutated))
-      g = g + scale_color_manual(breaks = c("yes", "no"), values = c("gray40", "black"))
+      g = g + scale_color_manual(breaks = c("yes", "no"), values = c("blue", "black"))
       g = g + scale_shape_manual(breaks = c("yes", "no"), values = c(3, 1))
       g = g + theme(
         legend.box.background = element_rect(),

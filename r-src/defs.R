@@ -21,9 +21,6 @@ WEIGHT_BOUNDS = c(1, 4040)
 PROFIT_BOUNDS = c(1, 4400)
 NODE_COORDINATE_BOUNDS = c(0, 10000)
 
-TMP_DIR = "../../../../dev/shm/bossek-ttp/"
-TMP_DIR = "/Users/bossek/tmp/ttp_evolve"
+TMP_DIR = "tmp"
 
-OUTPUT_PATH = "/scratch/tmp/bossek/ttp_evolve/data"
-#OUTPUT_PATH = "/Users/bossek/scratch/ttp_evolve/data"
-#OUTPUT_PATH= "data/"
+OUTPUT_PATH = "data"
